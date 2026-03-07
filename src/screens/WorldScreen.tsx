@@ -175,4 +175,3 @@ const styles = StyleSheet.create({
     zIndex: 2, // Cover the bottom of the trunk slightly
   },
 });
-

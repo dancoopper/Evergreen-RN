@@ -25,11 +25,6 @@ export default function LoginScreen() {
     { authorizationEndpoint: `${auth0Domain}/authorize` }
   );
 
-  const redirectUri = AuthSession.makeRedirectUri({ scheme: 'oasisapp' });
-  console.log('🔑 REDIRECT URI:', redirectUri);
-  console.log('🔑 REQUEST REDIRECT URI:', request?.redirectUri);
-  console.log('🔑 FULL AUTH URL:', request?.url);
-
   useEffect(() => {
     if (response) {
       if (response.type === 'error') {

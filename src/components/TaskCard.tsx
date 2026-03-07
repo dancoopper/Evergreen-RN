@@ -2,19 +2,31 @@ import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { theme } from '../theme/colors';
-import { HabitTask } from '../store/useStore';
+import { HabitTask, TaskCategory } from '../store/useStore';
 
 interface TaskCardProps {
   task: HabitTask;
   onComplete: () => void;
 }
 
+const categoryColors: Record<TaskCategory, string> = {
+  health: '#48BB78',
+  mind: '#9F7AEA',
+  social: '#ED8936',
+  environment: '#4299E1',
+};
+
+const categoryLabels: Record<TaskCategory, string> = {
+  health: '💚 Health',
+  mind: '🧠 Mind',
+  social: '🤝 Social',
+  environment: '🌿 Environment',
+};
+
 export default function TaskCard({ task, onComplete }: TaskCardProps) {
-  // Animation scale for a gentle pop when completed
   const scaleValue = useRef(new Animated.Value(1)).current;
   const fadeValue = useRef(new Animated.Value(1)).current;
 
-  // If completed, keep it slightly faded out
   useEffect(() => {
     if (task.completed) {
       Animated.timing(fadeValue, {
@@ -23,18 +35,17 @@ export default function TaskCard({ task, onComplete }: TaskCardProps) {
         useNativeDriver: true,
       }).start();
     } else {
-        Animated.timing(fadeValue, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-        }).start();
+      Animated.timing(fadeValue, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
     }
   }, [task.completed]);
 
   const handlePress = () => {
-    if (task.completed) return; // Already completed
+    if (task.completed) return;
 
-    // Gentle press animation
     Animated.sequence([
       Animated.timing(scaleValue, {
         toValue: 0.95,
@@ -52,50 +63,69 @@ export default function TaskCard({ task, onComplete }: TaskCardProps) {
         useNativeDriver: true,
       }),
     ]).start(() => {
-        onComplete();
+      onComplete();
     });
   };
 
+  const catColor = categoryColors[task.category] || '#9F7AEA';
+  const catLabel = categoryLabels[task.category] || '🧠 Mind';
+
   return (
     <Animated.View style={{ transform: [{ scale: scaleValue }], opacity: fadeValue }}>
-      <TouchableOpacity 
-        activeOpacity={0.8} 
-        style={[styles.card, task.completed && styles.cardCompleted]} 
+      <TouchableOpacity
+        activeOpacity={0.8}
+        style={[styles.card, task.completed && styles.cardCompleted]}
         onPress={handlePress}
         disabled={task.completed}
       >
         <View style={[styles.iconContainer, task.completed && styles.iconContainerCompleted]}>
-            {/* Convert generic icon strings to valid Feather icons */}
-            <Feather 
-                name={getFeatherIcon(task.icon)} 
-                size={24} 
-                color={task.completed ? theme.colors.card : theme.colors.primary} 
-            />
+          <Feather
+            name={getFeatherIcon(task.icon)}
+            size={22}
+            color={task.completed ? theme.colors.card : theme.colors.primary}
+          />
         </View>
-        
+
         <View style={styles.content}>
-            <Text style={[styles.title, task.completed && styles.titleCompleted]}>
-                {task.title}
+          <View style={styles.titleRow}>
+            <Text style={[styles.title, task.completed && styles.titleCompleted]} numberOfLines={1}>
+              {task.title}
             </Text>
+            <View style={[styles.categoryBadge, { backgroundColor: catColor + '20' }]}>
+              <Text style={[styles.categoryText, { color: catColor }]}>{catLabel}</Text>
+            </View>
+          </View>
+          {task.description ? (
+            <Text style={[styles.description, task.completed && styles.descriptionCompleted]} numberOfLines={2}>
+              {task.description}
+            </Text>
+          ) : null}
         </View>
 
         <View style={[styles.checkbox, task.completed && styles.checkboxCompleted]}>
-            {task.completed && <Feather name="check" size={16} color={theme.colors.card} />}
+          {task.completed && <Feather name="check" size={16} color={theme.colors.card} />}
         </View>
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
-// Simple mapper since our initialState used some generic strings
 function getFeatherIcon(type: string): keyof typeof Feather.glyphMap {
-    switch (type) {
-        case 'water': return 'droplet';
-        case 'bed': return 'home'; // bed doesn't exist in feather, use home
-        case 'walk': return 'navigation';
-        case 'sparkles': return 'star';
-        default: return 'circle';
-    }
+  switch (type) {
+    case 'water': return 'droplet';
+    case 'bed': return 'home';
+    case 'walk': return 'navigation';
+    case 'sparkles': return 'star';
+    case 'heart': return 'heart';
+    case 'book': return 'book-open';
+    case 'sun': return 'sun';
+    case 'music': return 'music';
+    case 'coffee': return 'coffee';
+    case 'smile': return 'smile';
+    case 'eye': return 'eye';
+    case 'moon': return 'moon';
+    default: return 'circle';
+  }
 }
 
 const styles = StyleSheet.create({
@@ -103,7 +133,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.card,
-    padding: theme.spacing.md,
+    paddingVertical: 12,
+    paddingLeft: 12,
+    paddingRight: 10,
     borderRadius: theme.borderRadius.lg,
     marginBottom: theme.spacing.md,
     shadowColor: '#000',
@@ -121,37 +153,67 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
+    width: 42,
+    height: 42,
     borderRadius: theme.borderRadius.md,
     backgroundColor: theme.colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing.md,
+    marginRight: 10,
+    flexShrink: 0,
   },
   iconContainerCompleted: {
     backgroundColor: theme.colors.primary,
   },
   content: {
     flex: 1,
+    flexShrink: 1,
+    marginRight: 8,
+    overflow: 'hidden',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   title: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: theme.colors.text,
+    flexShrink: 1,
   },
   titleCompleted: {
     color: theme.colors.textLight,
     textDecorationLine: 'line-through',
   },
+  categoryBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    flexShrink: 0,
+  },
+  categoryText: {
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  description: {
+    fontSize: 12,
+    color: theme.colors.textLight,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  descriptionCompleted: {
+    textDecorationLine: 'line-through',
+  },
   checkbox: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     borderWidth: 2,
     borderColor: theme.colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   checkboxCompleted: {
     backgroundColor: theme.colors.primary,
