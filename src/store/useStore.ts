@@ -7,11 +7,24 @@ export interface HabitTask {
   completed: boolean;
 }
 
+export interface User {
+  id: string;
+  email?: string;
+  name?: string;
+  isGuest?: boolean;
+}
+
 interface AppState {
   tasks: HabitTask[];
   growthLevel: number;
   completeTask: (id: string) => void;
   resetTasks: () => void;
+  
+  // Auth & Onboarding State
+  user: User | null;
+  setUser: (user: User | null) => void;
+  isOnboarded: boolean;
+  setOnboarded: (value: boolean) => void;
 }
 
 const initialTasks: HabitTask[] = [
@@ -35,7 +48,7 @@ export const useStore = create<AppState>((set) => ({
     
     return {
       tasks: updatedTasks,
-      growthLevel: completedCount, // Growth maps accurately to the number of completed tasks (0 to 4)
+      growthLevel: completedCount, 
     };
   }),
 
@@ -43,4 +56,9 @@ export const useStore = create<AppState>((set) => ({
     tasks: initialTasks,
     growthLevel: 0
   }),
+
+  user: null,
+  setUser: (user) => set({ user }),
+  isOnboarded: false,
+  setOnboarded: (value) => set({ isOnboarded: value }),
 }));

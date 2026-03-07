@@ -1,33 +1,29 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/colors';
 import { useStore } from '../store/useStore';
+import TreeRoom from '../components/TreeRoom';
+import { useIsFocused } from '@react-navigation/native';
 
 export default function WorldScreen() {
   const growthLevel = useStore(state => state.growthLevel); // 0 to 4
+  const isFocused = useIsFocused();
 
-  // Animation values
-  const skyColorAnim = useRef(new Animated.Value(0)).current;
-  const elementScaleAnim = useRef(new Animated.Value(0)).current;
+  // Environment animations based on current room growth
+  const skyColorAnim = useRef(new Animated.Value(growthLevel)).current;
 
   useEffect(() => {
-    // Animate when growthLevel changes
-    Animated.parallel([
+    if (isFocused) {
       Animated.timing(skyColorAnim, {
         toValue: growthLevel,
         duration: 800,
         useNativeDriver: false, // Colors can't use native driver
-      }),
-      Animated.spring(elementScaleAnim, {
-        toValue: growthLevel,
-        friction: 6,
-        tension: 40,
-        useNativeDriver: true, // Transforms can use native driver
-      })
-    ]).start();
-  }, [growthLevel]);
+      }).start();
+    }
+  }, [growthLevel, isFocused]);
 
-  // Interpolate Sky Color
+  // Interpolate Sky Color for the background based on today's tasks
   const skyColor = skyColorAnim.interpolate({
     inputRange: [0, 1, 2, 3, 4],
     outputRange: [
@@ -40,101 +36,63 @@ export default function WorldScreen() {
     extrapolate: 'clamp'
   });
 
-  // Calculate scales and opacities for different elements based on continuous animation value
-  const seedScale = elementScaleAnim.interpolate({
-    inputRange: [0, 0.5, 1, 4],
-    outputRange: [1, 1.2, 0.8, 0], // seed disappears as it grows
-    extrapolate: 'clamp'
-  });
-
-  const stemHeight = elementScaleAnim.interpolate({
-    inputRange: [0, 1, 2, 4],
-    outputRange: [0, 20, 80, 120],
-    extrapolate: 'clamp'
-  });
-
-  const leavesScale = elementScaleAnim.interpolate({
-    inputRange: [0, 1.5, 2, 4],
-    outputRange: [0, 0, 1, 1.2],
-    extrapolate: 'clamp'
-  });
-
-  const budScale = elementScaleAnim.interpolate({
-    inputRange: [0, 2.5, 3, 4],
-    outputRange: [0, 0, 1, 1],
-    extrapolate: 'clamp'
-  });
-
-  const bloomScale = elementScaleAnim.interpolate({
-    inputRange: [0, 3.5, 4],
-    outputRange: [0, 0, 1],
-    extrapolate: 'clamp'
-  });
-
-  const sunTranslateY = elementScaleAnim.interpolate({
-    inputRange: [0, 2, 4],
-    outputRange: [200, 50, -50], // Sun rises
-    extrapolate: 'clamp'
-  });
-
-  const sunOpacity = elementScaleAnim.interpolate({
-    inputRange: [0, 1, 3, 4],
-    outputRange: [0, 0, 0.5, 1],
-    extrapolate: 'clamp'
-  });
-
+  // Total Rooms configuration.
+  // We can eventually load `unlockedRoomsCount` from the Zustand store.
+  // For now, let's hardcode 4 total rooms to show the concept.
+  const TOTAL_ROOMS = 4;
+  const currentActiveRoomIndex = 0; // The bottom-most room is index 0
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <Animated.View style={[styles.container, { backgroundColor: skyColor }]}>
 
+        {/* Header Overlay (Pinned to top) */}
         <View style={styles.headerContainer}>
-          <Text style={[styles.header, growthLevel < 2 && { color: '#FFF' }]}>Your Oasis</Text>
+          <Text style={[styles.header, growthLevel < 2 && { color: '#FFF' }]}>Your Treehouse</Text>
           <Text style={[styles.subtitle, growthLevel < 2 && { color: '#CBD5E0' }]}>
-            {growthLevel === 0 && "Your world is quiet. Take a gentle step."}
-            {growthLevel === 1 && "A tiny sprout appears."}
-            {growthLevel === 2 && "Growing stronger."}
-            {growthLevel === 3 && "Almost ready to bloom."}
-            {growthLevel === 4 && "Your oasis is vibrant and alive."}
+            {growthLevel === 0 && "Your room is quiet. Take a gentle step."}
+            {growthLevel === 1 && "It feels a bit cozier."}
+            {growthLevel === 2 && "Settling in."}
+            {growthLevel === 3 && "Adding some life."}
+            {growthLevel === 4 && "Your sanctuary is glowing."}
           </Text>
         </View>
 
-        <View style={styles.worldContainer}>
-          {/* Sun */}
-          <Animated.View style={[styles.sun, {
-            opacity: sunOpacity,
-            transform: [{ translateY: sunTranslateY }]
-          }]} />
+        {/* Scrollable Tree Container */}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* We render from top to bottom. Highest index (locked) to lowest index (active) */}
+          {Array.from({ length: TOTAL_ROOMS })
+            .map((_, i) => TOTAL_ROOMS - 1 - i)
+            .map((roomIndex) => {
+              const isLocked = roomIndex > currentActiveRoomIndex;
+              const isCurrentlyActive = roomIndex === currentActiveRoomIndex;
+              const decorationLevel = isCurrentlyActive ? growthLevel : (isLocked ? 0 : 4);
 
-          {/* The Plant */}
-          <View style={styles.plantContainer}>
+              return (
+                <View key={roomIndex} style={styles.roomSection}>
+                  {/* Small trunk connector between rooms (except the very top one) */}
+                  {roomIndex !== TOTAL_ROOMS - 1 && (
+                    <View style={[styles.trunkSegment, isLocked && styles.trunkLocked]} />
+                  )}
 
-            {/* Flower Bloom (Level 4) */}
-            <Animated.View style={[styles.bloom, { transform: [{ scale: bloomScale }] }]}>
-              <View style={styles.petalTop} />
-              <View style={styles.petalRight} />
-              <View style={styles.petalBottom} />
-              <View style={styles.petalLeft} />
-              <View style={styles.flowerCenter} />
-            </Animated.View>
+                  <TreeRoom
+                    isLocked={isLocked}
+                    decorationLevel={decorationLevel}
+                  />
+                </View>
+              );
+            })}
 
-            {/* Bud (Level 3) */}
-            <Animated.View style={[styles.bud, { transform: [{ scale: budScale }], opacity: elementScaleAnim.interpolate({ inputRange: [3, 4], outputRange: [1, 0] }) }]} />
-
-            {/* Leaves (Level 2+) */}
-            <Animated.View style={[styles.leafLeft, { transform: [{ scale: leavesScale }] }]} />
-            <Animated.View style={[styles.leafRight, { transform: [{ scale: leavesScale }] }]} />
-
-            {/* Stem (Level 1+) */}
-            <Animated.View style={[styles.stem, { height: stemHeight }]} />
-
-            {/* Seed (Level 0) */}
-            <Animated.View style={[styles.seed, { transform: [{ scale: seedScale }] }]} />
-          </View>
-
+          {/* Base Trunk extending to the ground */}
+          <View style={styles.baseTrunk} />
           {/* Ground */}
           <View style={styles.ground} />
-        </View>
+        </ScrollView>
+
+
 
       </Animated.View>
     </SafeAreaView>
@@ -145,125 +103,76 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
+    paddingBottom: 24
   },
   container: {
     flex: 1,
+    position: 'relative'
   },
   headerContainer: {
-    padding: theme.spacing.lg,
+    position: 'absolute',
+    top: 20,
+    left: 0,
+    right: 0,
+    paddingHorizontal: theme.spacing.lg,
     zIndex: 10,
-    marginTop: theme.spacing.xl,
   },
   header: {
     fontSize: 32,
     fontWeight: '800',
     color: theme.colors.text,
     textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   subtitle: {
     fontSize: 16,
     color: theme.colors.textLight,
     marginTop: theme.spacing.sm,
-    textAlign: 'center'
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
-  worldContainer: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    position: 'relative',
-    overflow: 'hidden',
+    paddingTop: 150, // Space for header
+    paddingBottom: 0,
   },
-  sun: {
-    position: 'absolute',
-    top: 60,
-    right: 40,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: theme.colors.accent,
-    shadowColor: theme.colors.accent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 20,
-    elevation: 5,
+  roomSection: {
+    alignItems: 'center',
+  },
+  trunkSegment: {
+    width: 100,
+    height: 40,
+    backgroundColor: '#7B341E', // Wood color
+    marginVertical: -5,
+  },
+  trunkLocked: {
+    backgroundColor: '#4A5568', // Gray wood
+  },
+  baseTrunk: {
+    width: 120,
+    height: 80,
+    backgroundColor: '#7B341E',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    zIndex: -1,
+    marginTop: -10, // overlap bottom room slightly
   },
   ground: {
+    //position: 'absolute',
+    bottom: 0,
     width: '100%',
-    height: 100,
-    backgroundColor: '#81E6D9', // Soft teal green
+    height: 60,
+    backgroundColor: '#48BB78', // Soft grass green
     borderTopLeftRadius: 100,
     borderTopRightRadius: 100,
     transform: [{ scaleX: 1.5 }],
+    zIndex: 2, // Cover the bottom of the trunk slightly
   },
-  plantContainer: {
-    position: 'absolute',
-    bottom: 80, // slightly below ground top
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  seed: {
-    width: 20,
-    height: 14,
-    backgroundColor: '#975A16', // Brown
-    borderRadius: 10,
-    position: 'absolute',
-    bottom: 0,
-  },
-  stem: {
-    width: 8,
-    backgroundColor: '#48BB78', // Green
-    borderRadius: 4,
-    position: 'absolute',
-    bottom: 0,
-  },
-  leafLeft: {
-    position: 'absolute',
-    bottom: 40,
-    left: -20,
-    width: 24,
-    height: 12,
-    backgroundColor: '#48BB78',
-    borderTopLeftRadius: 12,
-    borderBottomRightRadius: 12,
-    transform: [{ rotate: '-30deg' }]
-  },
-  leafRight: {
-    position: 'absolute',
-    bottom: 60,
-    right: -20,
-    width: 24,
-    height: 12,
-    backgroundColor: '#48BB78',
-    borderTopRightRadius: 12,
-    borderBottomLeftRadius: 12,
-    transform: [{ rotate: '30deg' }]
-  },
-  bud: {
-    position: 'absolute',
-    bottom: 110,
-    width: 16,
-    height: 24,
-    backgroundColor: '#ED64A6', // Pink
-    borderRadius: 10,
-  },
-  bloom: {
-    position: 'absolute',
-    bottom: 110,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 60,
-    height: 60,
-  },
-  flowerCenter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: theme.colors.accent,
-    zIndex: 2,
-  },
-  petalTop: { position: 'absolute', top: 0, width: 24, height: 24, borderRadius: 12, backgroundColor: '#ED64A6' },
-  petalRight: { position: 'absolute', right: 0, width: 24, height: 24, borderRadius: 12, backgroundColor: '#ED64A6' },
-  petalBottom: { position: 'absolute', bottom: 0, width: 24, height: 24, borderRadius: 12, backgroundColor: '#ED64A6' },
-  petalLeft: { position: 'absolute', left: 0, width: 24, height: 24, borderRadius: 12, backgroundColor: '#ED64A6' },
 });
 
