@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Animated, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/colors';
 import { useStore } from '../store/useStore';
@@ -58,41 +58,41 @@ export default function WorldScreen() {
           </Text>
         </View>
 
-        {/* Scrollable Tree Container */}
-        <ScrollView
+        {/* Scrollable Tree Container mapped as a FlatList */}
+        <FlatList
+          data={Array.from({ length: TOTAL_ROOMS }).map((_, i) => TOTAL_ROOMS - 1 - i)}
+          keyExtractor={(item) => item.toString()}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-        >
-          {/* We render from top to bottom. Highest index (locked) to lowest index (active) */}
-          {Array.from({ length: TOTAL_ROOMS })
-            .map((_, i) => TOTAL_ROOMS - 1 - i)
-            .map((roomIndex) => {
-              const isLocked = roomIndex > currentActiveRoomIndex;
-              const isCurrentlyActive = roomIndex === currentActiveRoomIndex;
-              const decorationLevel = isCurrentlyActive ? growthLevel : (isLocked ? 0 : 4);
+          renderItem={({ item: roomIndex }) => {
+            const isLocked = roomIndex > currentActiveRoomIndex;
+            const isCurrentlyActive = roomIndex === currentActiveRoomIndex;
+            const decorationLevel = isCurrentlyActive ? growthLevel : (isLocked ? 0 : 4);
 
-              return (
-                <View key={roomIndex} style={styles.roomSection}>
-                  {/* Small trunk connector between rooms (except the very top one) */}
-                  {roomIndex !== TOTAL_ROOMS - 1 && (
-                    <View style={[styles.trunkSegment, isLocked && styles.trunkLocked]} />
-                  )}
+            return (
+              <View style={styles.roomSection}>
+                {/* Small trunk connector between rooms (except the very top one) */}
+                {roomIndex !== TOTAL_ROOMS - 1 && (
+                  <View style={[styles.trunkSegment, isLocked && styles.trunkLocked]} />
+                )}
 
-                  <TreeRoom
-                    isLocked={isLocked}
-                    decorationLevel={decorationLevel}
-                  />
-                </View>
-              );
-            })}
+                <TreeRoom
+                  isLocked={isLocked}
+                  decorationLevel={decorationLevel}
+                />
+              </View>
+            );
+          }}
+          ListFooterComponent={
+            <View style={{ alignItems: 'center' }}>
+              {/* Base Trunk extending to the ground */}
+              <View style={styles.baseTrunk} />
+            </View>
+          }
+        />
 
-          {/* Base Trunk extending to the ground */}
-          <View style={styles.baseTrunk} />
-          {/* Ground */}
-          <View style={styles.ground} />
-        </ScrollView>
-
-
+        {/* Ground rendered fixed at the bottom over the list */}
+        <View style={styles.ground} />
 
       </Animated.View>
     </SafeAreaView>
