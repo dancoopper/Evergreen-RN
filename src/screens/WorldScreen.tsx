@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Trunk1 from '../assets/trunk1.png';
 import Trunk2 from '../assets/trunk2.png';
 import RootPNG from '../assets/root.png';
+import Stair from '../assets/stair.svg'
 
 export default function WorldScreen() {
   const growthLevel = useStore(state => state.growthLevel); // 0 to 4
@@ -85,6 +86,7 @@ export default function WorldScreen() {
 
             return (
               <View style={styles.roomSection}>
+
                 {/* SVG Trunk background */}
                 <View style={styles.trunkContainer}>
                   {isTrunk1 ?
@@ -95,6 +97,8 @@ export default function WorldScreen() {
 
                 {/* Centered Room */}
                 <View style={[styles.roomAbsolute, isOddRoom && styles.roomOdd]}>
+
+
                   <TreeRoom
                     isLocked={isLocked}
                     decorationLevel={decorationLevel}
@@ -161,7 +165,7 @@ const styles = StyleSheet.create({
   },
   roomSection: {
     alignItems: 'center',
-
+    overflow: 'visible',
     justifyContent: 'center',
     position: 'relative',
   },
@@ -173,6 +177,7 @@ const styles = StyleSheet.create({
   roomAbsolute: {
     position: 'absolute',
     zIndex: 2,
+    overflow: 'visible',
     alignItems: 'center',
     justifyContent: 'center',
     left: 0,
@@ -189,6 +194,7 @@ const styles = StyleSheet.create({
   },
   rootContainer: {
     alignItems: 'center',
+    overflow: 'visible',
     // marginTop: -25, // overlap with the first trunk
     // marginBottom: -10,
     zIndex: 0,

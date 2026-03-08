@@ -4,6 +4,7 @@ import { useIsFocused } from '@react-navigation/native';
 import Room0 from '../assets/room0.png';
 import Room1 from '../assets/room1.png';
 import Room2 from '../assets/room2.png';
+import Stair from '../assets/stair.svg'
 import LockedRoom from '../assets/locked_room.png';
 import { Image } from 'react-native';
 
@@ -54,12 +55,7 @@ export default function TreeRoom({ isLocked, decorationLevel }: TreeRoomProps) {
       <Animated.View style={[styles.svgContainer, { opacity: 1 }]}>
         {getRoomSvg()}
       </Animated.View>
-      {decorationLevel >= 3 && !isLocked && (
-        <View style={styles.addOnContainer}>
-          {/* PLACEHOLDER: Replace this Image with the correct addition asset */}
-          <Image source={Room1} style={{ width: 80, height: 80, resizeMode: 'contain' }} />
-        </View>
-      )}
+
     </View>
   );
 }
@@ -81,6 +77,7 @@ const styles = StyleSheet.create({
   },
   addOnContainer: {
     position: 'absolute',
+    overflow: 'visible',
     right: -40,
     bottom: 20,
     zIndex: 5,
