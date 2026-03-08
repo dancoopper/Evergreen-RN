@@ -2,16 +2,22 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { theme } from '../theme/colors';
 import { useStore } from '../store/useStore';
+import { generateTasks } from '../lib/backboard';
 import { supabase } from '../lib/supabase';
 
 export default function OnboardingScreen() {
   const setOnboarded = useStore(state => state.setOnboarded);
   const user = useStore(state => state.user);
   const setUser = useStore(state => state.setUser);
-  
+  const setTasks = useStore(state => state.setTasks);
+  const setLoadingTasks = useStore(state => state.setLoadingTasks);
+  const setUserGoal = useStore(state => state.setUserGoal);
+  const syncTasksToSupabase = useStore(state => state.syncTasksToSupabase);
+
   const [name, setName] = useState('');
   const [goal, setGoal] = useState('');
   const [saving, setSaving] = useState(false);
+  const [statusText, setStatusText] = useState('');
 
   async function handleFinish() {
     if (!name.trim()) {
@@ -20,26 +26,58 @@ export default function OnboardingScreen() {
     }
 
     setSaving(true);
+    setStatusText('Setting up your space...');
 
-    if (user && !user.isGuest) {
-      // Save user info to Supabase using Auth0 user ID
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({ 
-          id: user.id, // Storing Auth0 ID as the primary key in Supabase
-          display_name: name,
-          primary_goal: goal,
-          updated_at: new Date()
-        });
-
-      if (error) {
-        console.warn("Could not save to Supabase. Make sure your tables are set up.", error);
-      }
-    }
-
-    // Update generic state for both auth'ed users and guests
+    // Update user name local state
     if (user) {
       setUser({ ...user, name: name });
+
+      if (!user.isGuest) {
+        // Save answers to Supabase
+        try {
+          if (user.fake_id) {
+            console.log('📝 Saving onboarding answers for fake_id:', user.fake_id);
+            const { data, error } = await supabase.from('Question_Answer').insert([
+              { user_id: user.fake_id, question_id: 1, answer: name.trim() },
+              { user_id: user.fake_id, question_id: 2, answer: goal.trim() }
+            ]).select();
+
+            if (error) {
+              console.error("❌ Supabase insert error for Question_Answer:", JSON.stringify(error));
+            } else {
+              console.log('✅ Onboarding answers saved:', data);
+            }
+          } else {
+            console.warn("⚠️ User fake_id is missing, cannot save answers. User:", JSON.stringify(user));
+          }
+        } catch (err) {
+          console.error("❌ Exception saving answers to Supabase:", err);
+        }
+      }
+
+    }
+
+    // Save the goal locally
+    setUserGoal(goal.trim());
+
+    // Generate AI tasks if the user provided a goal
+    if (goal.trim()) {
+      try {
+        setStatusText('🤖 Creating your personalized tasks...');
+        setLoadingTasks(true);
+
+        const aiTasks = await generateTasks(goal.trim());
+        setTasks(aiTasks);
+        // Persist AI-generated tasks to Supabase
+        syncTasksToSupabase(aiTasks);
+        setLoadingTasks(false);
+
+        console.log('✅ AI tasks set successfully');
+      } catch (error) {
+        console.warn('⚠️ AI task generation failed, using defaults:', error);
+        setLoadingTasks(false);
+        // Default tasks are already loaded in the store
+      }
     }
 
     setSaving(false);
@@ -48,12 +86,12 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView 
-        style={styles.container} 
+      <KeyboardAvoidingView
+        style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.headerContainer}>
-          <Text style={styles.header}>Welcome to Oasis</Text>
+          <Text style={styles.header}>Welcome to Evergreen</Text>
           <Text style={styles.subtitle}>Before we begin, let's personalize your space.</Text>
         </View>
 
@@ -78,15 +116,16 @@ export default function OnboardingScreen() {
               multiline
               numberOfLines={3}
             />
+            <Text style={styles.hint}>Our AI will create personalized tasks based on your goal ✨</Text>
           </View>
 
-          <TouchableOpacity 
-            style={styles.primaryButton} 
+          <TouchableOpacity
+            style={[styles.primaryButton, saving && styles.primaryButtonDisabled]}
             onPress={handleFinish}
             disabled={saving}
           >
             <Text style={styles.primaryButtonText}>
-                {saving ? "Saving..." : "Start My Journey"}
+              {saving ? statusText : "Start My Journey"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -104,6 +143,7 @@ const styles = StyleSheet.create({
   formContainer: {},
   inputContainer: { marginBottom: theme.spacing.xl },
   label: { fontSize: 16, fontWeight: '600', color: theme.colors.text, marginBottom: 12 },
+  hint: { fontSize: 13, color: theme.colors.textLight, marginTop: 8, fontStyle: 'italic' },
   input: {
     backgroundColor: '#FFF',
     borderWidth: 1,
@@ -128,6 +168,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 3,
+  },
+  primaryButtonDisabled: {
+    opacity: 0.8,
   },
   primaryButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
 });

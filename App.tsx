@@ -75,8 +75,8 @@ export default function App() {
       <NavigationContainer>
         {user ? (
           // Logged in
-          isOnboarded ? (
-            <MainTabs /> // Logged in + Onboarded -> Give them the app
+          (isOnboarded || user.isGuest) ? (
+            <MainTabs /> // Logged in + Onboarded or Guest -> Give them the app
           ) : (
             <Stack.Navigator screenOptions={{ headerShown: false }}>
               <Stack.Screen name="Onboarding" component={OnboardingScreen} />

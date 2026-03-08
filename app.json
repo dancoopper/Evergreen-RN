@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "OasisApp",
-    "slug": "OasisApp",
-    "scheme": "oasisapp",
+    "name": "Evergreen",
+    "slug": "Evergreen",
+    "scheme": "evergreen",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
