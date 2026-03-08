@@ -56,9 +56,9 @@ export default function SignupScreen({ navigation }: any) {
             />
           </View>
 
-          <TouchableOpacity 
-            style={styles.primaryButton} 
-            onPress={signUpWithEmail} 
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={signUpWithEmail}
             disabled={loading}
           >
             {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryButtonText}>Sign Up</Text>}
@@ -111,3 +111,6 @@ const styles = StyleSheet.create({
   footerText: { color: theme.colors.textLight, fontSize: 14 },
   footerLink: { color: theme.colors.primary, fontSize: 14, fontWeight: '600' },
 });
+
+// hi :)
+
