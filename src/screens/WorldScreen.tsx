@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, FlatList } from 'react-native';
+import { View, Text, StyleSheet, Animated, FlatList, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/colors';
 import { useStore } from '../store/useStore';
@@ -53,11 +53,11 @@ export default function WorldScreen() {
   const skyColor = skyColorAnim.interpolate({
     inputRange: [0, 1, 2, 3, 4],
     outputRange: [
-      '#1A202C', // Night/Dim
-      '#2D3748', // Dawn
-      '#EBF8FF', // Morning Blue
-      '#BEE3F8', // Sunny Light Blue
-      '#90CDF4'  // Bright Blue
+      '#0F1A2E', // Deep Night
+      '#1A2744', // Dawn
+      '#1E3A5F', // Morning Blue
+      '#2B5F8A', // Daytime Blue
+      '#3B82A0'  // Bright Sky
     ],
     extrapolate: 'clamp'
   });
@@ -128,9 +128,9 @@ export default function WorldScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <Animated.View style={[styles.container, { backgroundColor: skyColor }]}>
-        
+
         {/* Render 30 Fireflies in the background */}
         {Array.from({ length: 30 }).map((_, i) => (
           <Firefly key={`firefly-${i}`} delay={Math.random() * 2000} />
@@ -138,8 +138,8 @@ export default function WorldScreen() {
 
         {/* Header Overlay (Pinned to top) */}
         <View style={styles.headerContainer}>
-          <Text style={[styles.header, activeRoomDecorationLevel < 2 && { color: '#FFF' }]}>Your Treehouse</Text>
-          <Text style={[styles.subtitle, activeRoomDecorationLevel < 2 && { color: '#CBD5E0' }]}>
+          <Text style={[styles.header, { color: '#FFF' }]}>Your Treehouse!</Text>
+          <Text style={[styles.subtitle, { color: '#CBD5E0' }]}>
             {activeRoomDecorationLevel === 0 && "Your room is quiet. Take a gentle step."}
             {activeRoomDecorationLevel === 1 && "It feels a bit cozier."}
             {activeRoomDecorationLevel === 2 && "Settling in."}
@@ -157,7 +157,7 @@ export default function WorldScreen() {
           renderItem={({ item: roomIndex }) => {
             const isLocked = roomIndex > currentActiveRoomIndex;
             const isCurrentlyActive = roomIndex === currentActiveRoomIndex;
-            const decorationLevel = isCurrentlyActive ? growthLevel : (isLocked ? 0 : 4);
+            const decorationLevel = isCurrentlyActive ? activeRoomDecorationLevel : (isLocked ? 0 : 4);
 
             return (
               <View style={styles.roomSection}>
@@ -192,8 +192,7 @@ export default function WorldScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    paddingBottom: 24
+    backgroundColor: '#0F1A2E',
   },
   container: {
     flex: 1,
@@ -230,7 +229,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingTop: 150, // Space for header
-    paddingBottom: 0,
+    paddingBottom: 50, // Space so tree sits above the ground
   },
   roomSection: {
     alignItems: 'center',
@@ -254,14 +253,15 @@ const styles = StyleSheet.create({
     marginTop: -10, // overlap bottom room slightly
   },
   ground: {
-    //position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    height: 60,
-    backgroundColor: '#48BB78', // Soft grass green
+    position: 'absolute',
+    bottom: -10,
+    left: 0,
+    right: 0,
+    height: 80,
+    backgroundColor: '#48BB78',
     borderTopLeftRadius: 100,
     borderTopRightRadius: 100,
     transform: [{ scaleX: 1.5 }],
-    zIndex: 2, // Cover the bottom of the trunk slightly
+    zIndex: 2,
   },
 });
