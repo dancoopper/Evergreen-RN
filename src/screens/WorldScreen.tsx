@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, FlatList, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Animated, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/colors';
 import { useStore } from '../store/useStore';
@@ -150,24 +150,17 @@ export default function WorldScreen() {
 
         {/* Scrollable Tree Container mapped as a FlatList */}
         <FlatList
-          ref={flatListRef}
           data={Array.from({ length: TOTAL_ROOMS }).map((_, i) => TOTAL_ROOMS - 1 - i)}
           keyExtractor={(item) => item.toString()}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          onScrollToIndexFailed={(info) => {
-            const wait = new Promise(resolve => setTimeout(resolve, 500));
-            wait.then(() => {
-              flatListRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.5 });
-            });
-          }}
           renderItem={({ item: roomIndex }) => {
             const isLocked = roomIndex > currentActiveRoomIndex;
             const isCurrentlyActive = roomIndex === currentActiveRoomIndex;
-            const decorationLevel = isCurrentlyActive ? activeRoomDecorationLevel : (isLocked ? 0 : 4);
+            const decorationLevel = isCurrentlyActive ? growthLevel : (isLocked ? 0 : 4);
 
             return (
-              <View key={roomIndex} style={styles.roomSection}>
+              <View style={styles.roomSection}>
                 {/* Small trunk connector between rooms (except the very top one) */}
                 {roomIndex !== TOTAL_ROOMS - 1 && (
                   <View style={[styles.trunkSegment, isLocked && styles.trunkLocked]} />
@@ -181,14 +174,15 @@ export default function WorldScreen() {
             );
           }}
           ListFooterComponent={
-            <View style={{ alignItems: 'center', width: Dimensions.get('window').width }}>
+            <View style={{ alignItems: 'center' }}>
               {/* Base Trunk extending to the ground */}
               <View style={styles.baseTrunk} />
-              {/* Ground rendered at the bottom of the list */}
-              <View style={[styles.ground, { marginTop: -5, width: Dimensions.get('window').width }]} />
             </View>
           }
         />
+
+        {/* Ground rendered fixed at the bottom over the list */}
+        <View style={styles.ground} />
 
       </Animated.View>
     </SafeAreaView>
