@@ -119,7 +119,7 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.headerContainer}>
-          <Text style={styles.header}>Welcome to Oasis</Text>
+          <Text style={styles.header}>Welcome to Evergreen</Text>
           <Text style={styles.subtitle}>Begin your gentle journey today or pick up where you left off.</Text>
         </View>
 

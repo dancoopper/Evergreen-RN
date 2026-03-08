@@ -62,9 +62,79 @@ export default function WorldScreen() {
     extrapolate: 'clamp'
   });
 
+  // --- Firefly Component ---
+  const Firefly = ({ delay }: { delay: number }) => {
+    const anim = useRef(new Animated.Value(0)).current;
+    // Pre-calculate random positions so each firefly holds its spot
+    const topPos = useRef(Math.random() * Dimensions.get('window').height).current;
+    const leftPos = useRef(Math.random() * Dimensions.get('window').width).current;
+    const size = useRef(Math.random() * 4 + 2).current; // 2 to 6px
+
+    useEffect(() => {
+      // Create a slow pulse animation
+      const pulse = Animated.sequence([
+        Animated.delay(delay),
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(anim, {
+              toValue: 1,
+              duration: Math.random() * 2000 + 1500, // 1.5s to 3.5s
+              useNativeDriver: true,
+            }),
+            Animated.timing(anim, {
+              toValue: 0,
+              duration: Math.random() * 2000 + 1500,
+              useNativeDriver: true,
+            }),
+          ])
+        ),
+      ]);
+      pulse.start();
+      return () => pulse.stop();
+    }, []);
+
+    const opacity = anim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 0.8]
+    });
+
+    const translateY = anim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, -20] // Slight drift upwards
+    });
+
+    return (
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: topPos,
+          left: leftPos,
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: '#FDE047', // Yellow-400
+          opacity: opacity,
+          transform: [{ translateY }],
+          shadowColor: '#FEF08A',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 1,
+          shadowRadius: 6,
+          elevation: 4,
+          zIndex: 1
+        }}
+        pointerEvents="none"
+      />
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <Animated.View style={[styles.container, { backgroundColor: skyColor }]}>
+        
+        {/* Render 30 Fireflies in the background */}
+        {Array.from({ length: 30 }).map((_, i) => (
+          <Firefly key={`firefly-${i}`} delay={Math.random() * 2000} />
+        ))}
 
         {/* Header Overlay (Pinned to top) */}
         <View style={styles.headerContainer}>

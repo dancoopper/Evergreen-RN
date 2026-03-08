@@ -83,7 +83,7 @@ export default function OnboardingScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.headerContainer}>
-          <Text style={styles.header}>Welcome to Oasis</Text>
+          <Text style={styles.header}>Welcome to Evergreen</Text>
           <Text style={styles.subtitle}>Before we begin, let's personalize your space.</Text>
         </View>
 
