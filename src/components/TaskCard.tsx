@@ -17,10 +17,10 @@ const categoryColors: Record<TaskCategory, string> = {
 };
 
 const categoryLabels: Record<TaskCategory, string> = {
-  health: '💚 Health',
-  mind: '🧠 Mind',
-  social: '🤝 Social',
-  environment: '🌿 Environment',
+  health: ' Health',
+  mind: ' Mind',
+  social: ' Social',
+  environment: ' Environment',
 };
 
 export default function TaskCard({ task, onComplete }: TaskCardProps) {
@@ -68,7 +68,7 @@ export default function TaskCard({ task, onComplete }: TaskCardProps) {
   };
 
   const catColor = categoryColors[task.category] || '#9F7AEA';
-  const catLabel = categoryLabels[task.category] || '🧠 Mind';
+  const catLabel = categoryLabels[task.category] || 'Mind';
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleValue }], opacity: fadeValue }}>
