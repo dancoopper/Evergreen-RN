@@ -5,6 +5,8 @@ import * as AuthSession from 'expo-auth-session';
 import { theme } from '../theme/colors';
 import { useStore } from '../store/useStore';
 
+import { supabase } from '../lib/supabase';
+
 // Required for web browser auth redirects to return to the app smoothly
 WebBrowser.maybeCompleteAuthSession();
 
@@ -14,11 +16,14 @@ const auth0Domain = 'https://dev-yk8h2pi8f07c5icq.us.auth0.com';
 
 export default function LoginScreen() {
   const setUser = useStore(state => state.setUser);
+  const fetchUserData = useStore(state => state.fetchUserData);
+  const [loading, setLoading] = useState(false);
 
   // Define Auth0 Auth Request
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
       clientId: auth0ClientId,
+      responseType: AuthSession.ResponseType.Token,
       scopes: ['openid', 'profile', 'email'],
       redirectUri: AuthSession.makeRedirectUri({ scheme: 'oasisapp' }),
     },
@@ -27,19 +32,88 @@ export default function LoginScreen() {
 
   useEffect(() => {
     if (response) {
+      console.log('Auth0 Response:', JSON.stringify(response, null, 2));
+      
       if (response.type === 'error') {
         Alert.alert('Authentication error', response.params.error_description || 'Something went wrong');
         return;
       }
 
       if (response.type === 'success') {
-        // Retrieve access_token from the Auth0 explicit response.
-        // Usually, you should call your Auth0 /userinfo endpoint to get full user details using response.authentication.accessToken
-        // But for mock purposes, we create a generic user payload
-        setUser({ id: 'auth0_user_123' });
+        const token = response.authentication?.accessToken || response.params?.access_token;
+        if (!token) {
+          Alert.alert('Auth Error', 'No access token was returned by Auth0.');
+        } else {
+          fetchUserInfo(token);
+        }
       }
     }
   }, [response]);
+
+  // Helper to convert Auth0 string ID to an integer for your Supabase int8 column
+  const hashStringToInt = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+    }
+    return Math.abs(hash).toString(); // Return as string but it is a valid numeric integer
+  };
+
+  async function fetchUserInfo(accessToken?: string) {
+    if (!accessToken) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${auth0Domain}/userinfo`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const userInfo = await res.json();
+      
+      // Convert Auth0 string ID (e.g. auth0|1234) into a numeric ID for the DB
+      const userId = hashStringToInt(userInfo.sub || Date.now().toString());
+      
+      // Ensure user exists in Supabase User table
+      const { data, error } = await supabase
+        .from('User')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      let userFakeId = data?.fake_id;
+        
+      if (!data && !error) {
+        // Insert new user
+        const { data: insertData, error: insertError } = await supabase
+          .from('User')
+          .insert({ id: parseInt(userId, 10), world_level: 1, room_level: 1 })
+          .select()
+          .single();
+          
+        if (insertError) {
+          console.error("Error creating user in Supabase:", insertError);
+          Alert.alert('Database Error', `Could not create user profile in Supabase: ${insertError.message}`);
+        } else {
+          console.log("Successfully created user in Supabase");
+          userFakeId = insertData.fake_id;
+        }
+      } else if (error) {
+        console.error("Error fetching user from Supabase:", error);
+      }
+
+      // Restore user's tasks and level
+      if (userFakeId) {
+        await fetchUserData(userFakeId);
+      }
+
+      // We need to set them as the active user so the AuthStack unmounts!
+      setUser({ id: userId.toString(), fake_id: userFakeId, email: userInfo.email, name: userInfo.name });
+    } catch (e) {
+      console.error('Error fetching user info:', e);
+      Alert.alert('Error', 'Failed to retrieve user information.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -52,10 +126,14 @@ export default function LoginScreen() {
         <View style={styles.formContainer}>
           <TouchableOpacity
             style={styles.primaryButton}
-            disabled={!request}
+            disabled={!request || loading}
             onPress={() => promptAsync()}
           >
-            <Text style={styles.primaryButtonText}>Continue with Auth0</Text>
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Continue with Auth0</Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity

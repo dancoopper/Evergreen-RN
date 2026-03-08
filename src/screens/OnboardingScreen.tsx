@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Keyb
 import { theme } from '../theme/colors';
 import { useStore } from '../store/useStore';
 import { generateTasks } from '../lib/backboard';
+import { supabase } from '../lib/supabase';
 
 export default function OnboardingScreen() {
   const setOnboarded = useStore(state => state.setOnboarded);
@@ -26,12 +27,31 @@ export default function OnboardingScreen() {
     setSaving(true);
     setStatusText('Setting up your space...');
 
-    // Update user name
+    // Update user name local state
     if (user) {
       setUser({ ...user, name: name });
+
+      if (!user.isGuest) {
+        // Save answers to Supabase asynchronously
+        const saveAnswers = async () => {
+          try {
+            if (user.fake_id) {
+              await supabase.from('Question_Answer').insert([
+                { user_id: user.fake_id, question_id: 1, answer: name.trim() },
+                { user_id: user.fake_id, question_id: 2, answer: goal.trim() }
+              ]);
+            } else {
+              console.warn("User fake_id is missing, cannot save answers properly.");
+            }
+          } catch (err) {
+            console.error("Error saving answers to Supabase:", err);
+          }
+        };
+        saveAnswers();
+      }
     }
 
-    // Save the goal
+    // Save the goal locally
     setUserGoal(goal.trim());
 
     // Generate AI tasks if the user provided a goal
