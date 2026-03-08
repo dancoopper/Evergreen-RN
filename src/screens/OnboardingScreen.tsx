@@ -33,23 +33,28 @@ export default function OnboardingScreen() {
       setUser({ ...user, name: name });
 
       if (!user.isGuest) {
-        // Save answers to Supabase asynchronously
-        const saveAnswers = async () => {
-          try {
-            if (user.fake_id) {
-              await supabase.from('Question_Answer').insert([
-                { user_id: user.fake_id, question_id: 1, answer: name.trim() },
-                { user_id: user.fake_id, question_id: 2, answer: goal.trim() }
-              ]);
+        // Save answers to Supabase
+        try {
+          if (user.fake_id) {
+            console.log('📝 Saving onboarding answers for fake_id:', user.fake_id);
+            const { data, error } = await supabase.from('Question_Answer').insert([
+              { user_id: user.fake_id, question_id: 1, answer: name.trim() },
+              { user_id: user.fake_id, question_id: 2, answer: goal.trim() }
+            ]).select();
+
+            if (error) {
+              console.error("❌ Supabase insert error for Question_Answer:", JSON.stringify(error));
             } else {
-              console.warn("User fake_id is missing, cannot save answers properly.");
+              console.log('✅ Onboarding answers saved:', data);
             }
-          } catch (err) {
-            console.error("Error saving answers to Supabase:", err);
+          } else {
+            console.warn("⚠️ User fake_id is missing, cannot save answers. User:", JSON.stringify(user));
           }
-        };
-        saveAnswers();
+        } catch (err) {
+          console.error("❌ Exception saving answers to Supabase:", err);
+        }
       }
+
     }
 
     // Save the goal locally

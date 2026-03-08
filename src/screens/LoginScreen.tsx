@@ -101,11 +101,43 @@ export default function LoginScreen() {
       }
 
       // Restore user's tasks and level
+      let alreadyOnboarded = false;
       if (userFakeId) {
         await fetchUserData(userFakeId);
+
+        // Check if user has already completed onboarding (has answers in Question_Answer)
+        console.log('🔍 Checking Question_Answer for fake_id:', userFakeId);
+        const { data: existingAnswers, error: qaError } = await supabase
+          .from('Question_Answer')
+          .select('question_id, answer')
+          .eq('user_id', userFakeId);
+
+        console.log('🔍 Question_Answer result:', JSON.stringify(existingAnswers), 'error:', JSON.stringify(qaError));
+
+        if (existingAnswers && existingAnswers.length > 0) {
+          // User already onboarded — restore their name/goal and skip onboarding
+          const goalAnswer = existingAnswers.find((a: any) => a.question_id === 2);
+
+          if (goalAnswer?.answer) {
+            useStore.getState().setUserGoal(goalAnswer.answer);
+          }
+
+          alreadyOnboarded = true;
+          console.log('✅ Returning user detected — will skip onboarding');
+        } else {
+          console.log('ℹ️ No existing answers found — user needs onboarding');
+        }
+      } else {
+        console.warn('⚠️ No fake_id found — cannot check Question_Answer');
       }
 
-      // We need to set them as the active user so the AuthStack unmounts!
+      // Set onboarded FIRST so that when setUser triggers the re-render,
+      // App.tsx already sees isOnboarded=true and skips the onboarding screen.
+      if (alreadyOnboarded) {
+        useStore.getState().setOnboarded(true);
+      }
+
+      // Now set the user — this triggers the navigation switch in App.tsx
       setUser({ id: userId.toString(), fake_id: userFakeId, email: userInfo.email, name: userInfo.name });
     } catch (e) {
       console.error('Error fetching user info:', e);
