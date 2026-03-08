@@ -1,10 +1,14 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, FlatList } from 'react-native';
+import { View, Text, StyleSheet, Animated, FlatList, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/colors';
 import { useStore } from '../store/useStore';
 import TreeRoom from '../components/TreeRoom';
 import { useIsFocused } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Trunk1 from '../assets/trunk1.png';
+import Trunk2 from '../assets/trunk2.png';
+import RootPNG from '../assets/root.png';
 
 export default function WorldScreen() {
   const growthLevel = useStore(state => state.growthLevel); // 0 to 4
@@ -37,14 +41,21 @@ export default function WorldScreen() {
   });
 
   // Total Rooms configuration.
-  // We can eventually load `unlockedRoomsCount` from the Zustand store.
-  // For now, let's hardcode 4 total rooms to show the concept.
   const TOTAL_ROOMS = 4;
-  const currentActiveRoomIndex = 0; // The bottom-most room is index 0
+  const currentActiveRoomIndex = 1; // Room index 0 is bottom, index 1 is active for visual testing
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <Animated.View style={[styles.container, { backgroundColor: skyColor }]}>
+
+        {/* Horizontal Gradient Overlay to make the center darker than the sides */}
+        <LinearGradient
+          colors={['#010727ff', '#011927', '#011927', '#010727ff']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={StyleSheet.absoluteFillObject}
+          pointerEvents="none"
+        />
 
         {/* Header Overlay (Pinned to top) */}
         <View style={styles.headerContainer}>
@@ -60,39 +71,48 @@ export default function WorldScreen() {
 
         {/* Scrollable Tree Container mapped as a FlatList */}
         <FlatList
-          data={Array.from({ length: TOTAL_ROOMS }).map((_, i) => TOTAL_ROOMS - 1 - i)}
+          data={Array.from({ length: TOTAL_ROOMS }).map((_, i) => i)} // 0 is bottom-most room due to inverted
           keyExtractor={(item) => item.toString()}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          inverted={true}
           renderItem={({ item: roomIndex }) => {
             const isLocked = roomIndex > currentActiveRoomIndex;
             const isCurrentlyActive = roomIndex === currentActiveRoomIndex;
             const decorationLevel = isCurrentlyActive ? growthLevel : (isLocked ? 0 : 4);
+            const isTrunk1 = roomIndex % 2 === 0;
+            const isOddRoom = roomIndex % 2 !== 0;
 
             return (
               <View style={styles.roomSection}>
-                {/* Small trunk connector between rooms (except the very top one) */}
-                {roomIndex !== TOTAL_ROOMS - 1 && (
-                  <View style={[styles.trunkSegment, isLocked && styles.trunkLocked]} />
-                )}
+                {/* SVG Trunk background */}
+                <View style={styles.trunkContainer}>
+                  {isTrunk1 ?
+                    <Image source={Trunk1} style={{ width: 413, height: 181, resizeMode: 'cover' }} /> :
+                    <Image source={Trunk2} style={{ width: 413, height: 231, resizeMode: 'cover' }} />
+                  }
+                </View>
 
-                <TreeRoom
-                  isLocked={isLocked}
-                  decorationLevel={decorationLevel}
-                />
+                {/* Centered Room */}
+                <View style={[styles.roomAbsolute, isOddRoom && styles.roomOdd]}>
+                  <TreeRoom
+                    isLocked={isLocked}
+                    decorationLevel={decorationLevel}
+                  />
+                </View>
               </View>
             );
           }}
-          ListFooterComponent={
-            <View style={{ alignItems: 'center' }}>
-              {/* Base Trunk extending to the ground */}
-              <View style={styles.baseTrunk} />
+          ListHeaderComponent={
+            // ListHeaderComponent appears at the bottom due to inverted={true}
+            <View style={styles.rootContainer}>
+              <Image source={RootPNG} style={{ width: 413, height: 177, resizeMode: 'cover' }} />
             </View>
           }
         />
 
         {/* Ground rendered fixed at the bottom over the list */}
-        <View style={styles.ground} />
+        {/* <View style={styles.ground} /> */}
 
       </Animated.View>
     </SafeAreaView>
@@ -102,7 +122,6 @@ export default function WorldScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
     paddingBottom: 24
   },
   container: {
@@ -137,34 +156,44 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingTop: 150, // Space for header
-    paddingBottom: 0,
+    paddingTop: 0, // Padding bottom gives space for the visual header at the top
+    paddingBottom: 150,
   },
   roomSection: {
     alignItems: 'center',
+
+    justifyContent: 'center',
+    position: 'relative',
   },
-  trunkSegment: {
-    width: 100,
-    height: 40,
-    backgroundColor: '#7B341E', // Wood color
-    marginVertical: -5,
+  trunkContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
   },
-  trunkLocked: {
-    backgroundColor: '#4A5568', // Gray wood
+  roomAbsolute: {
+    position: 'absolute',
+    zIndex: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    transform: [{ translateX: 40 }],
+
   },
-  baseTrunk: {
-    width: 120,
-    height: 80,
-    backgroundColor: '#7B341E',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    zIndex: -1,
-    marginTop: -10, // overlap bottom room slightly
+  roomOdd: {
+    marginLeft: 60,
+    transform: [{ scaleX: -1 }, { translateX: 50 }],
+
+  },
+  rootContainer: {
+    alignItems: 'center',
+    // marginTop: -25, // overlap with the first trunk
+    // marginBottom: -10,
+    zIndex: 0,
   },
   ground: {
-    //position: 'absolute',
     bottom: 0,
     width: '100%',
     height: 60,
