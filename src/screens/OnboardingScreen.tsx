@@ -12,6 +12,7 @@ export default function OnboardingScreen() {
   const setTasks = useStore(state => state.setTasks);
   const setLoadingTasks = useStore(state => state.setLoadingTasks);
   const setUserGoal = useStore(state => state.setUserGoal);
+  const syncTasksToSupabase = useStore(state => state.syncTasksToSupabase);
 
   const [name, setName] = useState('');
   const [goal, setGoal] = useState('');
@@ -62,6 +63,8 @@ export default function OnboardingScreen() {
 
         const aiTasks = await generateTasks(goal.trim());
         setTasks(aiTasks);
+        // Persist AI-generated tasks to Supabase
+        syncTasksToSupabase(aiTasks);
         setLoadingTasks(false);
 
         console.log('✅ AI tasks set successfully');

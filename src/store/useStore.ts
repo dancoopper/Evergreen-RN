@@ -39,6 +39,7 @@ interface AppState {
 
   // Supabase Sync
   fetchUserData: (fakeId: string) => Promise<void>;
+  syncTasksToSupabase: (tasks: HabitTask[]) => Promise<void>;
 }
 
 export const defaultTasks: HabitTask[] = [
@@ -122,6 +123,30 @@ export const useStore = create<AppState>((set, get) => ({
       });
     } catch (err) {
       console.error("Error fetching user data from Supabase:", err);
+    }
+  },
+
+  syncTasksToSupabase: async (tasks: HabitTask[]) => {
+    const state = get();
+    if (!state.user || state.user.isGuest || !state.user.fake_id) return;
+
+    try {
+      const rows = tasks.map(task => ({
+        task_name: task.title,
+        description: task.description,
+        category: task.category,
+        completed: false,
+        user_id: state.user!.fake_id,
+      }));
+
+      const { error } = await supabase.from('Task').insert(rows);
+      if (error) {
+        console.error('Error syncing AI tasks to Supabase:', error);
+      } else {
+        console.log('✅ AI tasks synced to Supabase:', rows.length);
+      }
+    } catch (err) {
+      console.error('Error syncing AI tasks:', err);
     }
   },
 

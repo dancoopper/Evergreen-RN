@@ -16,6 +16,7 @@ export default function TasksScreen() {
   const setTasks = useStore(state => state.setTasks);
   const setLoadingTasks = useStore(state => state.setLoadingTasks);
   const setUserGoal = useStore(state => state.setUserGoal);
+  const syncTasksToSupabase = useStore(state => state.syncTasksToSupabase);
 
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showGoalModal, setShowGoalModal] = useState(false);
@@ -34,6 +35,8 @@ export default function TasksScreen() {
     try {
       const aiTasks = await generateTasks(goal.trim());
       setTasks(aiTasks);
+      // Persist AI-generated tasks to Supabase
+      syncTasksToSupabase(aiTasks);
     } catch (error) {
       console.warn('⚠️ Failed to generate tasks:', error);
     } finally {
