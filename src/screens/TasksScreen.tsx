@@ -1,11 +1,74 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, Modal, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/colors';
 import { useStore, defaultTasks } from '../store/useStore';
 import TaskCard from '../components/TaskCard';
 import { Feather } from '@expo/vector-icons';
 import { generateTasks } from '../lib/backboard';
+import { LinearGradient } from 'expo-linear-gradient';
+
+// --- Firefly Component ---
+const Firefly = ({ delay }: { delay: number }) => {
+  const anim = useRef(new Animated.Value(0)).current;
+  const topPos = useRef(Math.random() * Dimensions.get('window').height).current;
+  const leftPos = useRef(Math.random() * Dimensions.get('window').width).current;
+  const size = useRef(Math.random() * 6 + 4).current; 
+
+  useEffect(() => {
+    const pulse = Animated.sequence([
+      Animated.delay(delay),
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: Math.random() * 2000 + 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 0,
+            duration: Math.random() * 2000 + 2000,
+            useNativeDriver: true,
+          }),
+        ])
+      ),
+    ]);
+    pulse.start();
+    return () => pulse.stop();
+  }, []);
+
+  const opacity = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.6]
+  });
+  const translateY = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -15]
+  });
+
+  return (
+    <Animated.View
+      style={{
+        position: 'absolute',
+        top: topPos,
+        left: leftPos,
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: '#E2F1E7', 
+        opacity: opacity,
+        transform: [{ translateY }],
+        shadowColor: '#FEF08A',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 10,
+        elevation: 4,
+        zIndex: 1
+      }}
+      pointerEvents="none"
+    />
+  );
+};
 
 export default function TasksScreen() {
   const tasks = useStore(state => state.tasks);
@@ -17,6 +80,7 @@ export default function TasksScreen() {
   const setLoadingTasks = useStore(state => state.setLoadingTasks);
   const setUserGoal = useStore(state => state.setUserGoal);
   const syncTasksToSupabase = useStore(state => state.syncTasksToSupabase);
+  const user = useStore(state => state.user);
 
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showGoalModal, setShowGoalModal] = useState(false);
@@ -35,7 +99,6 @@ export default function TasksScreen() {
     try {
       const aiTasks = await generateTasks(goal.trim());
       setTasks(aiTasks);
-      // Persist AI-generated tasks to Supabase
       syncTasksToSupabase(aiTasks);
     } catch (error) {
       console.warn('⚠️ Failed to generate tasks:', error);
@@ -69,45 +132,50 @@ export default function TasksScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.header}>Gentle Steps</Text>
-            <Text style={styles.subtitle}>Take your time, there is no rush.</Text>
-          </View>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* Deep Teal Background */}
+      <View style={styles.backgroundContainer}>
+        <LinearGradient
+          colors={['#2B464F', '#1F343A']}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {Array.from({ length: 25 }).map((_, i) => (
+          <Firefly key={`firefly-${i}`} delay={Math.random() * 2000} />
+        ))}
+      </View>
+
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        
+        {/* Glassmorphic Welcome Card */}
+        <View style={styles.welcomeCard}>
+          <Text style={styles.welcomeTitle}>Evergreen</Text>
+          <Text style={styles.welcomeSubtitle}>Welcome{user?.name ? `, ${user.name}` : ''}!</Text>
+          <Text style={styles.welcomeText}>
+            Whenever you're ready, let's have a short breath here can grow something real in the full Evergreen app.
+          </Text>
+          
           <View style={styles.headerActions}>
             {userGoal ? (
-              <TouchableOpacity
-                onPress={handleRegenerate}
-                style={styles.actionButton}
-                disabled={isRegenerating}
-              >
-                <Feather name="refresh-cw" size={18} color={isRegenerating ? theme.colors.textLight : theme.colors.primary} />
+              <TouchableOpacity onPress={handleRegenerate} style={styles.actionIconButton} disabled={isRegenerating}>
+                <Feather name="refresh-cw" size={16} color={isRegenerating ? 'rgba(255,255,255,0.4)' : '#FFF'} />
               </TouchableOpacity>
             ) : null}
             {completedCount > 0 && (
-              <TouchableOpacity onPress={resetTasks} style={styles.actionButton}>
-                <Feather name="rotate-ccw" size={18} color={theme.colors.textLight} />
+              <TouchableOpacity onPress={resetTasks} style={styles.actionIconButton}>
+                <Feather name="rotate-ccw" size={16} color="#FFF" />
               </TouchableOpacity>
             )}
+            {userGoal ? (
+              <TouchableOpacity onPress={handleDeleteGoal} style={styles.actionIconButton}>
+                <Feather name="x" size={16} color="#FFF" />
+              </TouchableOpacity>
+            ) : null}
           </View>
         </View>
 
-        {/* Current goal badge */}
-        {userGoal ? (
-          <View style={styles.goalBadge}>
-            <Feather name="target" size={14} color={theme.colors.primary} />
-            <Text style={styles.goalBadgeText} numberOfLines={1}>{userGoal}</Text>
-            <TouchableOpacity onPress={handleDeleteGoal} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Feather name="x" size={14} color={theme.colors.textLight} />
-            </TouchableOpacity>
-          </View>
-        ) : null}
-
         {isLoadingTasks || isRegenerating ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <ActivityIndicator size="large" color="#E2F1E7" />
             <Text style={styles.loadingText}>
               {isRegenerating ? 'Refreshing your tasks...' : 'Creating your gentle steps...'}
             </Text>
@@ -139,8 +207,15 @@ export default function TasksScreen() {
           style={styles.newGoalButton}
           onPress={() => { setNewGoal(''); setShowGoalModal(true); }}
         >
-          <Feather name="plus" size={18} color={theme.colors.primary} />
-          <Text style={styles.newGoalButtonText}>Set a new goal</Text>
+          <LinearGradient
+            colors={['#F6B352', '#F68657']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.newGoalGradient}
+          >
+            <Feather name="target" size={18} color="#FFF" />
+            <Text style={styles.newGoalButtonText}>Set a new goal</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </ScrollView>
 
@@ -148,7 +223,7 @@ export default function TasksScreen() {
       <Modal
         visible={showGoalModal}
         transparent
-        animationType="slide"
+        animationType="fade"
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
@@ -161,6 +236,7 @@ export default function TasksScreen() {
             <TextInput
               style={styles.modalInput}
               placeholder="e.g. Exercise more, read daily, eat healthier..."
+              placeholderTextColor="rgba(255,255,255,0.4)"
               value={newGoal}
               onChangeText={setNewGoal}
               multiline
@@ -180,8 +256,15 @@ export default function TasksScreen() {
                 onPress={() => handleGenerateForGoal(newGoal)}
                 disabled={!newGoal.trim()}
               >
-                <Feather name="zap" size={16} color="#FFF" />
-                <Text style={styles.modalSubmitText}>Generate Tasks</Text>
+                <LinearGradient
+                  colors={['#F6B352', '#F68657']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.modalSubmitGradient}
+                >
+                  <Feather name="zap" size={16} color="#FFF" />
+                  <Text style={styles.modalSubmitText}>Generate Tasks</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           </View>
@@ -194,58 +277,64 @@ export default function TasksScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#1F343A',
+  },
+  backgroundContainer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
   },
   container: {
     flexGrow: 1,
     padding: theme.spacing.lg,
+    paddingTop: 40,
+    zIndex: 1,
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginTop: theme.spacing.md,
+  welcomeCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+  },
+  welcomeTitle: {
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 8,
+  },
+  welcomeSubtitle: {
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#FFF',
+    marginBottom: 16,
+  },
+  welcomeText: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.85)',
+    lineHeight: 22,
+    marginBottom: 16,
   },
   headerActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 12,
+    justifyContent: 'flex-end',
   },
-  header: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: theme.colors.text,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: theme.colors.textLight,
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  goalBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.primaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: theme.borderRadius.full,
-    alignSelf: 'flex-start',
-    marginBottom: theme.spacing.lg,
-    gap: 6,
-  },
-  goalBadgeText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.primary,
-  },
-  actionButton: {
-    padding: theme.spacing.sm,
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.full,
+  actionIconButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   list: {
-    marginTop: theme.spacing.sm,
+    marginTop: 10,
   },
   loadingContainer: {
     flex: 1,
@@ -256,118 +345,133 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 18,
     fontWeight: '600',
-    color: theme.colors.text,
+    color: '#FFF',
     marginTop: theme.spacing.lg,
   },
   loadingSubtext: {
     fontSize: 14,
-    color: theme.colors.textLight,
+    color: 'rgba(255,255,255,0.6)',
     marginTop: theme.spacing.sm,
   },
   celebration: {
     marginTop: theme.spacing.xl,
     padding: theme.spacing.lg,
-    backgroundColor: theme.colors.primaryLight,
+    backgroundColor: 'rgba(72, 187, 120, 0.2)',
     borderRadius: theme.borderRadius.lg,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(72, 187, 120, 0.4)',
   },
   celebrationText: {
     fontSize: 18,
     fontWeight: '600',
-    color: theme.colors.text,
+    color: '#FFF',
   },
   celebrationSub: {
     fontSize: 14,
-    color: theme.colors.text,
+    color: 'rgba(255,255,255,0.8)',
     marginTop: 4,
   },
   newGoalButton: {
+    marginTop: 30,
+    marginBottom: 40,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#F68657',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  newGoalGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: theme.spacing.xl,
-    paddingVertical: 14,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1.5,
-    borderColor: theme.colors.primary,
-    borderStyle: 'dashed',
+    paddingVertical: 16,
     gap: 8,
   },
   newGoalButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.colors.primary,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFF',
   },
   // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: theme.spacing.xl,
+    backgroundColor: '#1F343A',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
     paddingBottom: 40,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
   },
   modalTitle: {
-    fontSize: 22,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontSize: 24,
     fontWeight: '700',
-    color: theme.colors.text,
+    color: '#FFF',
   },
   modalSubtitle: {
     fontSize: 14,
-    color: theme.colors.textLight,
-    marginTop: 4,
-    marginBottom: theme.spacing.lg,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 8,
+    marginBottom: 20,
   },
   modalInput: {
-    backgroundColor: theme.colors.background,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 16,
+    padding: 16,
     fontSize: 16,
-    color: theme.colors.text,
-    height: 80,
+    color: '#FFF',
+    height: 100,
     textAlignVertical: 'top',
   },
   modalButtons: {
     flexDirection: 'row',
-    marginTop: theme.spacing.lg,
+    marginTop: 20,
     gap: 12,
   },
   modalCancelButton: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: 'center',
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.background,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   modalCancelText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.textLight,
+    color: 'rgba(255,255,255,0.7)',
   },
   modalSubmitButton: {
     flex: 2,
+    borderRadius: 100,
+    overflow: 'hidden',
+  },
+  modalSubmitGradient: {
+    flex: 1,
     flexDirection: 'row',
-    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.primary,
-    gap: 6,
+    paddingVertical: 16,
+    gap: 8,
   },
   modalSubmitDisabled: {
     opacity: 0.5,
   },
   modalSubmitText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFF',
   },
 });
+

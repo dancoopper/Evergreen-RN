@@ -12,7 +12,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 // Setup your Auth0 variables here
 const auth0ClientId = 'jIghKHutk4A9z2LsezkLmHcnw1Mo58Jb';
-const auth0Domain = 'https://dev-yk8h2pi8f07c5icq.us.auth0.com/';
+const auth0Domain = 'https://dev-yk8h2pi8f07c5icq.us.auth0.com';
 
 export default function LoginScreen() {
   const setUser = useStore(state => state.setUser);

@@ -16,7 +16,7 @@ export default function WorldScreen() {
   const growthLevel = useStore(state => state.growthLevel);
   const isFocused = useIsFocused();
 
-  const TOTAL_ROOMS = 4;
+  const TOTAL_ROOMS = 5;
   const TASKS_PER_ROOM = 4;
 
   // Calculate which room is active based on completed tasks
@@ -25,7 +25,7 @@ export default function WorldScreen() {
   // The decoration level of the currently active room
   const activeRoomDecorationLevel = growthLevel >= TOTAL_ROOMS * TASKS_PER_ROOM
     ? 4
-    : growthLevel % TASKS_PER_ROOM;
+    : (growthLevel % TASKS_PER_ROOM);
 
   // Environment animations based on current active room growth
   const skyColorAnim = useRef(new Animated.Value(activeRoomDecorationLevel)).current;
@@ -160,6 +160,10 @@ export default function WorldScreen() {
             {activeRoomDecorationLevel === 3 && "Adding some life."}
             {activeRoomDecorationLevel === 4 && "Your sanctuary is glowing."}
           </Text>
+          {/* TEMP DEBUG ELEMENT */}
+          <Text style={{ textAlign: 'center', color: '#F87171', fontWeight: 'bold', marginTop: 8 }}>
+            DEBUG - Raw Growth Level: {growthLevel}
+          </Text>
         </View>
 
         {/* Scrollable Tree Container mapped as a FlatList */}
@@ -172,7 +176,9 @@ export default function WorldScreen() {
           renderItem={({ item: roomIndex }) => {
             const isLocked = roomIndex > currentActiveRoomIndex;
             const isCurrentlyActive = roomIndex === currentActiveRoomIndex;
-            const decorationLevel = isCurrentlyActive ? growthLevel : (isLocked ? 0 : 4);
+            const decorationLevel = isCurrentlyActive 
+              ? (growthLevel % TASKS_PER_ROOM) || (growthLevel > 0 && growthLevel % TASKS_PER_ROOM === 0 ? 4 : 0)
+              : (isLocked ? 0 : 4);
             const isTrunk1 = roomIndex % 2 === 0;
             const isOddRoom = roomIndex % 2 !== 0;
 

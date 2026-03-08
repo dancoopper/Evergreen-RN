@@ -56,37 +56,41 @@ export const useStore = create<AppState>((set, get) => ({
 
   completeTask: (id) => {
     const state = get();
-    const updatedTasks = state.tasks.map(task =>
-      task.id === id ? { ...task, completed: true } : task
+    const task = state.tasks.find(t => t.id === id);
+    
+    // If the task is already completed, do nothing to avoid double incrementing
+    if (!task || task.completed) return;
+
+    const updatedTasks = state.tasks.map(t =>
+      t.id === id ? { ...t, completed: true } : t
     );
-    const completedCount = updatedTasks.filter(t => t.completed).length;
+    
+    // Increment the growth level by 1 for the newly completed task
+    const newGrowthLevel = state.growthLevel + 1;
 
     // Sync to Supabase if logged in
     if (state.user && !state.user.isGuest && state.user.fake_id) {
-      const task = state.tasks.find(t => t.id === id);
-      if (task) {
-        supabase.from('Task').insert([
-          {
-            task_name: task.title,
-            description: task.description,
-            category: task.category,
-            completed: true,
-            user_id: state.user.fake_id
-          }
-        ]).then(({ error }) => {
-          if (error) console.error("Error syncing task:", error);
-        });
-      }
+      supabase.from('Task').insert([
+        {
+          task_name: task.title,
+          description: task.description,
+          category: task.category,
+          completed: true,
+          user_id: state.user.fake_id
+        }
+      ]).then(({ error }) => {
+        if (error) console.error("Error syncing task:", error);
+      });
 
       // Update User world_level
-      supabase.from('User').update({ world_level: Math.max(1, completedCount) })
+      supabase.from('User').update({ world_level: newGrowthLevel })
         .eq('fake_id', state.user.fake_id)
         .then(({ error }) => {
           if (error) console.error("Error updating world_level:", error);
         });
     }
 
-    set({ tasks: updatedTasks, growthLevel: completedCount });
+    set({ tasks: updatedTasks, growthLevel: newGrowthLevel });
   },
 
   fetchUserData: async (fakeId: string) => {
@@ -111,10 +115,14 @@ export const useStore = create<AppState>((set, get) => ({
             }
             return t;
           });
-          // Update growth level to match completed tasks if it's currently 0 or smaller
-          const actualCompletedCount = syncedTasks.filter(t => t.completed).length;
-          newGrowthLevel = Math.max(newGrowthLevel, actualCompletedCount);
+          // Removed Math.max overwrite so manual UI checks or Supabase overrides aren't broken by historical task counts.
         }
+
+        console.log("=== DEBUG USESTORE START ===");
+        console.log("Supabase raw world_level:", userData?.world_level);
+        console.log("Tasks found in DB:", userTasks?.length || 0);
+        console.log("Final applied newGrowthLevel:", newGrowthLevel);
+        console.log("=== DEBUG USESTORE END ===");
 
         return {
           growthLevel: newGrowthLevel,
@@ -151,11 +159,10 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   resetTasks: () => set((state) => ({
-    tasks: state.tasks.map(t => ({ ...t, completed: false })),
-    growthLevel: 0
+    tasks: state.tasks.map(t => ({ ...t, completed: false }))
   })),
 
-  setTasks: (tasks) => set({ tasks, growthLevel: 0 }),
+  setTasks: (tasks) => set({ tasks }),
   setLoadingTasks: (loading) => set({ isLoadingTasks: loading }),
 
   user: null,
