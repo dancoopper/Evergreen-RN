@@ -13,19 +13,19 @@ import Stair from '../assets/stair.svg'
 
 export default function WorldScreen() {
 
-  const totalCompletedTasks = useStore(state => state.growthLevel);
+  const growthLevel = useStore(state => state.growthLevel);
   const isFocused = useIsFocused();
 
   const TOTAL_ROOMS = 4;
   const TASKS_PER_ROOM = 4;
 
   // Calculate which room is active based on completed tasks
-  const currentActiveRoomIndex = Math.min(Math.floor(totalCompletedTasks / TASKS_PER_ROOM), TOTAL_ROOMS - 1);
+  const currentActiveRoomIndex = Math.min(Math.floor(growthLevel / TASKS_PER_ROOM), TOTAL_ROOMS - 1);
 
   // The decoration level of the currently active room
-  const activeRoomDecorationLevel = totalCompletedTasks >= TOTAL_ROOMS * TASKS_PER_ROOM
+  const activeRoomDecorationLevel = growthLevel >= TOTAL_ROOMS * TASKS_PER_ROOM
     ? 4
-    : totalCompletedTasks % TASKS_PER_ROOM;
+    : growthLevel % TASKS_PER_ROOM;
 
   // Environment animations based on current active room growth
   const skyColorAnim = useRef(new Animated.Value(activeRoomDecorationLevel)).current;
