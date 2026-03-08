@@ -12,7 +12,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 // Setup your Auth0 variables here
 const auth0ClientId = 'jIghKHutk4A9z2LsezkLmHcnw1Mo58Jb';
-const auth0Domain = 'https://dev-yk8h2pi8f07c5icq.us.auth0.com';
+const auth0Domain = 'https://dev-yk8h2pi8f07c5icq.us.auth0.com/';
 
 export default function LoginScreen() {
   const setUser = useStore(state => state.setUser);
@@ -33,7 +33,7 @@ export default function LoginScreen() {
   useEffect(() => {
     if (response) {
       console.log('Auth0 Response:', JSON.stringify(response, null, 2));
-      
+
       if (response.type === 'error') {
         Alert.alert('Authentication error', response.params.error_description || 'Something went wrong');
         return;
@@ -54,8 +54,8 @@ export default function LoginScreen() {
   const hashStringToInt = (str: string) => {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
-        hash = (hash << 5) - hash + str.charCodeAt(i);
-        hash |= 0;
+      hash = (hash << 5) - hash + str.charCodeAt(i);
+      hash |= 0;
     }
     return Math.abs(hash).toString(); // Return as string but it is a valid numeric integer
   };
@@ -68,19 +68,19 @@ export default function LoginScreen() {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const userInfo = await res.json();
-      
+
       // Convert Auth0 string ID (e.g. auth0|1234) into a numeric ID for the DB
       const userId = hashStringToInt(userInfo.sub || Date.now().toString());
-      
+
       // Ensure user exists in Supabase User table
       const { data, error } = await supabase
         .from('User')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
-        
+
       let userFakeId = data?.fake_id;
-        
+
       if (!data && !error) {
         // Insert new user
         const { data: insertData, error: insertError } = await supabase
@@ -88,7 +88,7 @@ export default function LoginScreen() {
           .insert({ id: parseInt(userId, 10), world_level: 1, room_level: 1 })
           .select()
           .single();
-          
+
         if (insertError) {
           console.error("Error creating user in Supabase:", insertError);
           Alert.alert('Database Error', `Could not create user profile in Supabase: ${insertError.message}`);
